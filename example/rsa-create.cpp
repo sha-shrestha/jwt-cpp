@@ -1,7 +1,8 @@
 #include <iostream>
 #include <jwt-cpp/jwt.h>
 
-int main(int argc, const char** argv) {
+int main() {
+
 	std::string rsa_priv_key = R"(-----BEGIN PRIVATE KEY-----
 MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQC4ZtdaIrd1BPIJ
 tfnF0TjIK5inQAXZ3XlCrUlJdP+XHwIRxdv1FsN12XyMYO/6ymLmo9ryoQeIrsXB
@@ -30,6 +31,7 @@ RultUEe2C0jYMDQx+JYxbPmtcopvZQrFEur3WKVuLy5UAy7EBvwMnZwIG7OOohJb
 vkSpADK6VPn9lbqq7O8cTedEHttm6otmLt8ZyEl3hZMaL3hbuRj6ysjmoFKx6CrX
 rK0/Ikt5ybqUzKCMJZg2VKGTxg==
 -----END PRIVATE KEY-----)";
+
 	std::string rsa_pub_key = R"(-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuGbXWiK3dQTyCbX5xdE4
 yCuYp0AF2d15Qq1JSXT/lx8CEcXb9RbDddl8jGDv+spi5qPa8qEHiK7FwV2KpRE9
@@ -40,14 +42,32 @@ AziMCxS+VrRPDM+zfvpIJg3JljAh3PJHDiLu902v9w+Iplu1WyoB2aPfitxEhRN0
 YwIDAQAB
 -----END PUBLIC KEY-----)";
 
+	const auto issued_at = std::chrono::system_clock::now();
+
+	const auto expires_at = issued_at + std::chrono::seconds{5*60};
+
 	auto token = jwt::create()
 					 .set_issuer("auth0")
 					 .set_type("JWT")
+					 .set_key_id("foo")
 					 .set_id("rsa-create-example")
-					 .set_issued_at(std::chrono::system_clock::now())
-					 .set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds{36000})
-					 .set_payload_claim("sample", jwt::claim(std::string{"test"}))
+					 .set_audience("aud1")
+					 .set_subject("subject")
+					 .set_issued_at(issued_at)
+					 .set_expires_at(expires_at)
 					 .sign(jwt::algorithm::rs256(rsa_pub_key, rsa_priv_key, "", ""));
 
-	std::cout << "token:\n" << token << std::endl;
+	std::cout << "Signed JWT:\n\n" << token << std::endl << std::endl;
+
+	const auto decoded = jwt::decode(token);
+
+	std::cout << "Decoded header claims:\n" << std::endl;
+
+	for (auto& e : decoded.get_header_claims())
+		std::cout << e.first << " = " << e.second.to_json() << std::endl;
+
+	std::cout << "\nDecoded payload claims:\n" << std::endl;
+
+	for (auto& e : decoded.get_payload_claims())
+		std::cout << e.first << " = " << e.second.to_json() << std::endl;
 }
